@@ -118,7 +118,39 @@ RCT_EXPORT_METHOD(lockToPortrait)
 
 }
 
+RCT_EXPORT_METHOD(lockToPortraitThenUnlock)
+{
+  #if DEBUG
+    NSLog(@"Locked to Portrait");
+  #endif
+  [Orientation setOrientation:UIInterfaceOrientationMaskPortrait];
+  [[NSOperationQueue mainQueue] addOperationWithBlock:^ {
+    [[UIDevice currentDevice] setValue:[NSNumber numberWithInteger: UIInterfaceOrientationPortrait] forKey:@"orientation"];
+  }];
+
+}
+
 RCT_EXPORT_METHOD(lockToLandscape)
+{
+  #if DEBUG
+    NSLog(@"Locked to Landscape");
+  #endif
+  UIDeviceOrientation orientation = [[UIDevice currentDevice] orientation];
+  NSString *orientationStr = [self getSpecificOrientationStr:orientation];
+  if ([orientationStr isEqualToString:@"LANDSCAPE-LEFT"]) {
+    [Orientation setOrientation:UIInterfaceOrientationMaskLandscape];
+    [[NSOperationQueue mainQueue] addOperationWithBlock:^ {
+      [[UIDevice currentDevice] setValue:[NSNumber numberWithInteger: UIInterfaceOrientationLandscapeRight] forKey:@"orientation"];
+    }];
+  } else {
+    [Orientation setOrientation:UIInterfaceOrientationMaskLandscape];
+    [[NSOperationQueue mainQueue] addOperationWithBlock:^ {
+      [[UIDevice currentDevice] setValue:[NSNumber numberWithInteger: UIInterfaceOrientationLandscapeLeft] forKey:@"orientation"];
+    }];
+  }
+}
+
+RCT_EXPORT_METHOD(lockToLandscapeThenUnlock)
 {
   #if DEBUG
     NSLog(@"Locked to Landscape");

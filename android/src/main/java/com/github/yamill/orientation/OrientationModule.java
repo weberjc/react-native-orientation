@@ -8,6 +8,8 @@ import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.util.Log;
+import android.view.OrientationEventListener;
+import android.hardware.SensorManager;
 
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Arguments;
@@ -27,6 +29,11 @@ import javax.annotation.Nullable;
 
 public class OrientationModule extends ReactContextBaseJavaModule implements LifecycleEventListener{
     final BroadcastReceiver receiver;
+    OrientationEventListener mOrientationListener;
+    private final int MEASURED_UNSPECIFIED = 0;
+    private final int MEASURED_PORTRAIT = 1;
+    private final int MEASURED_LANDSCAPE = 2;
+    private int lockType = MEASURED_UNSPECIFIED;
 
     public OrientationModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -50,6 +57,41 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
             }
         };
         ctx.addLifecycleEventListener(this);
+    }
+
+    public void activateOrientationListener(Context context, int newLockType){
+        if(mOrientationListener != null) mOrientationListener.disable();
+
+        this.lockType = newLockType;
+
+        mOrientationListener = new OrientationEventListener(context,
+                 SensorManager.SENSOR_DELAY_NORMAL) {
+            @Override
+            public void onOrientationChanged(int orientation) {
+                if(lockType == MEASURED_LANDSCAPE){
+                    if((orientation >= 75 && orientation <= 105) ||
+                        (orientation >= 255 && orientation <= 285))
+                    {
+                        unlockAllOrientations();
+                    }
+                } else if (lockType == MEASURED_PORTRAIT){
+                    if((orientation != -1 && orientation <= 10) ||
+                    (orientation >= 350) ||
+                    (orientation >= 170 && orientation <= 190))
+                    {
+                        unlockAllOrientations();
+                    }
+                }
+            }
+        };
+
+        if (mOrientationListener.canDetectOrientation() == true) {
+            mOrientationListener.enable();
+        }
+    }
+
+    public void deactivateOrientationListener(){
+        if(mOrientationListener != null) mOrientationListener.disable();
     }
 
     @Override
@@ -76,8 +118,20 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
         if (activity == null) {
             return;
         }
+        deactivateOrientationListener();
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     }
+
+    @ReactMethod
+    public void lockToPortraitThenUnlock() {
+        final Activity activity = getCurrentActivity();
+        if (activity == null) {
+            return;
+        }
+        activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        activateOrientationListener(activity, MEASURED_PORTRAIT);
+    }
+
 
     @ReactMethod
     public void lockToLandscape() {
@@ -85,8 +139,20 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
         if (activity == null) {
             return;
         }
+        deactivateOrientationListener();
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
     }
+
+    @ReactMethod
+    public void lockToLandscapeThenUnlock() {
+        final Activity activity = getCurrentActivity();
+        if (activity == null) {
+            return;
+        }
+        activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        activateOrientationListener(activity, MEASURED_LANDSCAPE);
+    }
+
 
     @ReactMethod
     public void lockToLandscapeLeft() {
@@ -94,6 +160,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
         if (activity == null) {
             return;
         }
+        deactivateOrientationListener();
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
     }
 
@@ -103,6 +170,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
         if (activity == null) {
             return;
         }
+        deactivateOrientationListener();
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
     }
 
@@ -112,6 +180,7 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Lif
         if (activity == null) {
             return;
         }
+        deactivateOrientationListener();
         activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
 
